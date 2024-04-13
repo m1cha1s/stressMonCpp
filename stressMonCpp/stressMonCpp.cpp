@@ -9,14 +9,42 @@ WCHAR szTitle[MAX_LOADSTRING];
 WCHAR szWindowClass[MAX_LOADSTRING];
 
 ATOM                MyRegisterClass(HINSTANCE hInstance);
-BOOL                InitInstance(HINSTANCE, int);
+BOOL                InitInstance(HINSTANCE, int, HWND*);
 LRESULT CALLBACK    WndProc(HWND, UINT, WPARAM, LPARAM);
 INT_PTR CALLBACK    About(HWND, UINT, WPARAM, LPARAM);
 
+global_variable bool Running;
 global_variable BITMAPINFO BitmapInfo;
 global_variable void *BitmapMemory;
 global_variable int BitmapWidth;
 global_variable int BitmapHeight;
+global_variable int BytesPerPixel = 4;
+
+internal void
+RenderWeirdGradient(int XOffset, int YOffset)
+{
+    int Pitch = BitmapWidth*BytesPerPixel;
+    u8 *Row = (u8*)BitmapMemory;
+    for (int Y = 0; Y < BitmapHeight; Y++)
+    {
+        u8* Pixel = (u8*)Row;
+        for (int X = 0; X < BitmapWidth; X++)
+        {
+            *Pixel = (u8)(X + XOffset);
+            ++Pixel;
+            
+            *Pixel = (u8)(Y + YOffset);
+            ++Pixel;
+            
+            *Pixel = 255;
+            ++Pixel;
+            
+            *Pixel = 0; // Padding
+            ++Pixel;
+        }
+        Row += Pitch;
+    }
+}
 
 internal void
 Win32ResizeDIBSection(int Width, int Height)
@@ -36,33 +64,9 @@ Win32ResizeDIBSection(int Width, int Height)
     BitmapInfo.bmiHeader.biBitCount = 32;
     BitmapInfo.bmiHeader.biCompression = BI_RGB;
     
-    int BytesPerPixel = 4;
     int BitmapMemorySize = BytesPerPixel*BitmapWidth*BitmapHeight;
     // Here we are allocating whole pages, 4k or 64k, depending on the system shenanigans
     BitmapMemory = VirtualAlloc(0, BitmapMemorySize, MEM_COMMIT, PAGE_READWRITE);
-    
-    
-    int Pitch = BitmapWidth*BytesPerPixel;
-    u8 *Row = (u8*)BitmapMemory;
-    for (int Y = 0; Y < BitmapHeight; Y++)
-    {
-        u8* Pixel = (u8*)Row;
-        for (int X = 0; X < BitmapWidth; X++)
-        {
-            *Pixel = (u8)X;
-            ++Pixel;
-            
-            *Pixel = (u8)Y;
-            ++Pixel;
-            
-            *Pixel = 255;
-            ++Pixel;
-            
-            *Pixel = 0; // Padding
-            ++Pixel;
-        }
-        Row += Pitch;
-    }
 }
 
 internal void
@@ -96,7 +100,8 @@ wWinMain(_In_ HINSTANCE hInstance,
     LoadStringW(hInstance, IDC_STRESSMONCPP, szWindowClass, MAX_LOADSTRING);
     MyRegisterClass(hInstance);
     
-    if (!InitInstance (hInstance, nCmdShow))
+    HWND Window;
+    if (!InitInstance (hInstance, nCmdShow, &Window))
     {
         return FALSE;
     }
@@ -105,13 +110,40 @@ wWinMain(_In_ HINSTANCE hInstance,
     
     MSG msg;
     
-    while (GetMessage(&msg, nullptr, 0, 0))
+    int XOffset = 0;
+    int YOffset = 0;
+    
+    Running = true;
+    while (Running)
     {
-        if (!TranslateAccelerator(msg.hwnd, hAccelTable, &msg))
+        
+        while(PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE))
         {
-            TranslateMessage(&msg);
-            DispatchMessage(&msg);
+            if (msg.message == WM_QUIT)
+            {
+                Running = false;
+            }
+            
+            if (!TranslateAccelerator(msg.hwnd, hAccelTable, &msg))
+            {
+                TranslateMessage(&msg);
+                DispatchMessage(&msg);
+            }
         }
+        
+        RenderWeirdGradient(XOffset, YOffset);
+        
+        HDC DeviceContext = GetDC(Window);
+        RECT WindowRect;
+        GetClientRect(Window, &WindowRect);
+        int WindowWidth = WindowRect.right - WindowRect.left;
+        int WindowHeight = WindowRect.bottom - WindowRect.top;
+        Win32UpdateWindow(DeviceContext, &WindowRect, 0, 0, WindowWidth, WindowHeight);
+        ReleaseDC(Window, DeviceContext);
+        
+        ++XOffset;
+        ++YOffset;
+        ++YOffset;
     }
     
     return (int) msg.wParam;
@@ -142,20 +174,20 @@ MyRegisterClass(HINSTANCE hInstance)
 
 // Create main window
 BOOL 
-InitInstance(HINSTANCE hInstance, int nCmdShow)
+InitInstance(HINSTANCE hInstance, int nCmdShow, HWND *hWnd)
 {
     hInst = hInstance;
     
-    HWND hWnd = CreateWindowW(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW,
-                              CW_USEDEFAULT, 0, CW_USEDEFAULT, 0, nullptr, nullptr, hInstance, nullptr);
+    *hWnd = CreateWindowW(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW,
+                          CW_USEDEFAULT, 0, CW_USEDEFAULT, 0, nullptr, nullptr, hInstance, nullptr);
     
-    if (!hWnd)
+    if (!(*hWnd))
     {
         return FALSE;
     }
     
-    ShowWindow(hWnd, nCmdShow);
-    UpdateWindow(hWnd);
+    ShowWindow(*hWnd, nCmdShow);
+    UpdateWindow(*hWnd);
     return TRUE;
 }
 
