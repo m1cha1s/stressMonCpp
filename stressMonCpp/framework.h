@@ -14,6 +14,8 @@
 #define local_persist static
 #define global_variable static
 
+#define maxPortStrSize 10
+
 #define ConnectButton 1
 
 typedef uint8_t u8;

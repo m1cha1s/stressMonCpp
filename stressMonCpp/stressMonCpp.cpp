@@ -14,12 +14,18 @@ LRESULT CALLBACK    WndProc(HWND, UINT, WPARAM, LPARAM);
 INT_PTR CALLBACK    About(HWND, UINT, WPARAM, LPARAM);
 
 global_variable bool Running;
+
 global_variable BITMAPINFO BitmapInfo;
 global_variable void *BitmapMemory;
 global_variable int BitmapWidth;
 global_variable int BitmapHeight;
 global_variable int BytesPerPixel = 4;
+
 global_variable HWND Button;
+global_variable HWND COMPortField;
+
+global_variable HANDLE COMPort;
+global_variable DCB dcb;
 
 global_variable int Speed = 1;
 
@@ -207,6 +213,7 @@ WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             GetClientRect(hWnd, &ClientRect);
             int Width = ClientRect.right - ClientRect.left;
             int Height = ClientRect.bottom - ClientRect.top;
+            
             Button = CreateWindow( 
                                   L"BUTTON",  // Predefined class; Unicode assumed 
                                   L"Connect",      // Button text 
@@ -214,11 +221,24 @@ WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                                   Width - 150,         // x position
                                   10,         // y position 
                                   100,        // Button width
-                                  100,        // Button height
+                                  23,        // Button height
                                   hWnd,     // Parent window
                                   (HMENU)ConnectButton,       // No menu.
                                   NULL, 
                                   NULL);      // Pointer not needed.
+            
+            COMPortField = CreateWindow(
+                                        L"EDIT",
+                                        L"COM",
+                                        WS_BORDER | WS_TABSTOP | WS_VISIBLE | WS_CHILD,
+                                        Width - 150,
+                                        10 + 23 + 10,
+                                        100,
+                                        23,
+                                        hWnd,
+                                        NULL,
+                                        NULL,
+                                        NULL);
         } break;
         case WM_SIZE:
         {
@@ -227,7 +247,9 @@ WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             int Width = ClientRect.right - ClientRect.left;
             int Height = ClientRect.bottom - ClientRect.top;
             Win32ResizeDIBSection(Width, Height);
+            
             SetWindowPos(Button, NULL, Width - 150, 10, 0, 0, SWP_NOSIZE | SWP_NOZORDER | SWP_SHOWWINDOW);
+            SetWindowPos(COMPortField, NULL, Width - 150, 10 + 23 + 10, 0, 0, SWP_NOSIZE | SWP_NOZORDER | SWP_SHOWWINDOW);
         } break;
         case WM_COMMAND:
         {
@@ -237,7 +259,63 @@ WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             {
                 case ConnectButton:
                 {
-                    Speed++;
+                    Speed++; // To be removed
+                    
+                    WCHAR portName[maxPortStrSize];
+                    
+                    GetWindowTextW(COMPortField, portName, maxPortStrSize);
+                    
+                    OutputDebugStringW(portName);
+                    OutputDebugStringW(L"\n");
+                    
+                    if (COMPort != INVALID_HANDLE_VALUE)
+                    {
+                        CloseHandle(COMPort);
+                    }
+                    
+                    COMPort = CreateFile(portName,
+                                         GENERIC_READ | GENERIC_WRITE,
+                                         0,
+                                         NULL,
+                                         OPEN_EXISTING,
+                                         0,
+                                         NULL);
+                    
+                    if (COMPort == INVALID_HANDLE_VALUE)
+                    {
+                        goto FAIL;
+                    }
+                    
+                    // Initialize the DCB struct
+                    SecureZeroMemory(&dcb, sizeof(DCB));
+                    dcb.DCBlength = sizeof(DCB);
+                    
+                    if (!GetCommState(COMPort, &dcb))
+                    {
+                        goto FAIL_OPEN_HANDLE;
+                    }
+                    
+                    dcb.BaudRate = CBR_9600;
+                    dcb.ByteSize = 8;
+                    dcb.Parity = NOPARITY;
+                    dcb.StopBits = ONESTOPBIT;
+                    
+                    if (!SetCommState(COMPort, &dcb))
+                    {
+                        goto FAIL_OPEN_HANDLE;
+                    }
+                    
+                    /*
+                    if (!GetCommState(COMPort, &dcb))
+                    {
+                        goto FAIL_OPEN_HANDLE;
+                    }*/
+                    
+                    break;
+                    FAIL_OPEN_HANDLE:
+                    CloseHandle(COMPort);
+                    FAIL:
+                    MessageBoxA(NULL, "Failed to open COM port.", "Error", MB_OK | MB_ICONERROR);
                 } break;
                 case IDM_ABOUT:
                 DialogBox(hInst, MAKEINTRESOURCE(IDD_ABOUTBOX), hWnd, About);
