@@ -119,8 +119,13 @@ wWinMain(_In_ HINSTANCE hInstance,
     
     MSG msg;
     
-    int XOffset = 0;
-    int YOffset = 0;
+    Plot p;
+    
+    p.StrokeColor = 0x00FFFFFF;
+    p.PlotRegion.top = 10;
+    p.PlotRegion.left = 10;
+    p.PlotRegion.bottom = 510;
+    p.PlotRegion.right = 510;
     
     Running = true;
     while (Running)
@@ -140,7 +145,8 @@ wWinMain(_In_ HINSTANCE hInstance,
             }
         }
         
-        RenderWeirdGradient(XOffset, YOffset);
+        //RenderWeirdGradient(XOffset, YOffset);
+        p.Draw((u32*)BitmapMemory, BitmapWidth, BitmapHeight);
         
         HDC DeviceContext = GetDC(Window);
         RECT WindowRect;
@@ -150,9 +156,7 @@ wWinMain(_In_ HINSTANCE hInstance,
         Win32UpdateWindow(DeviceContext, &WindowRect, 0, 0, WindowWidth, WindowHeight);
         ReleaseDC(Window, DeviceContext);
         
-        XOffset += Speed;
-        YOffset += Speed;
-        YOffset += Speed;
+        p.PushHead(50-rand()%100);
     }
     
     return (int) msg.wParam;
