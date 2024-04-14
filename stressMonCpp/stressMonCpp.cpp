@@ -24,7 +24,7 @@ global_variable int BytesPerPixel = 4;
 global_variable HWND Button;
 global_variable HWND COMPortField;
 
-global_variable HANDLE COMPort;
+global_variable HANDLE COMPort = INVALID_HANDLE_VALUE;
 global_variable DCB dcb;
 
 global_variable int Speed = 1;
@@ -259,8 +259,6 @@ WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             {
                 case ConnectButton:
                 {
-                    Speed++; // To be removed
-                    
                     WCHAR portName[maxPortStrSize];
                     
                     GetWindowTextW(COMPortField, portName, maxPortStrSize);
@@ -271,6 +269,9 @@ WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                     if (COMPort != INVALID_HANDLE_VALUE)
                     {
                         CloseHandle(COMPort);
+                        COMPort = INVALID_HANDLE_VALUE;
+                        SetWindowTextW(Button, L"Connect");
+                        break;
                     }
                     
                     COMPort = CreateFile(portName,
@@ -310,6 +311,8 @@ WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                     {
                         goto FAIL_OPEN_HANDLE;
                     }*/
+                    
+                    SetWindowTextW(Button, L"Disconnect");
                     
                     break;
                     FAIL_OPEN_HANDLE:
