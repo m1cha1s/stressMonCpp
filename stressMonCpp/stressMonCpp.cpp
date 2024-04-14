@@ -126,7 +126,7 @@ wWinMain(_In_ HINSTANCE hInstance,
     while (Running)
     {
         
-        while(PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE))
+        while (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE))
         {
             if (msg.message == WM_QUIT)
             {
