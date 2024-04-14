@@ -2,7 +2,7 @@
 #include "stressMonCpp.h"
 
 #define MAX_LOADSTRING 100
-#define SIDE_BAR_WIDTH 100
+#define SIDE_BAR_WIDTH 200
 
 HINSTANCE hInst;
 WCHAR szTitle[MAX_LOADSTRING];
@@ -19,6 +19,9 @@ global_variable void *BitmapMemory;
 global_variable int BitmapWidth;
 global_variable int BitmapHeight;
 global_variable int BytesPerPixel = 4;
+global_variable HWND Button;
+
+global_variable int Speed = 1;
 
 internal void
 RenderWeirdGradient(int XOffset, int YOffset)
@@ -59,7 +62,7 @@ Win32ResizeDIBSection(int Width, int Height)
     
     BitmapInfo.bmiHeader.biSize = sizeof(BitmapInfo.bmiHeader);
     BitmapInfo.bmiHeader.biWidth = BitmapWidth;
-    BitmapInfo.bmiHeader.biHeight = -BitmapHeight; // This is negative for a top down DIB
+    BitmapInfo.bmiHeader.biHeight = -BitmapHeight; // This is negative for a top down DIB buffer
     BitmapInfo.bmiHeader.biPlanes = 1;
     BitmapInfo.bmiHeader.biBitCount = 32;
     BitmapInfo.bmiHeader.biCompression = BI_RGB;
@@ -141,9 +144,9 @@ wWinMain(_In_ HINSTANCE hInstance,
         Win32UpdateWindow(DeviceContext, &WindowRect, 0, 0, WindowWidth, WindowHeight);
         ReleaseDC(Window, DeviceContext);
         
-        ++XOffset;
-        ++YOffset;
-        ++YOffset;
+        XOffset += Speed;
+        YOffset += Speed;
+        YOffset += Speed;
     }
     
     return (int) msg.wParam;
@@ -198,6 +201,25 @@ WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
     switch (message)
     {
+        case WM_CREATE:
+        {
+            RECT ClientRect;
+            GetClientRect(hWnd, &ClientRect);
+            int Width = ClientRect.right - ClientRect.left;
+            int Height = ClientRect.bottom - ClientRect.top;
+            Button = CreateWindow( 
+                                  L"BUTTON",  // Predefined class; Unicode assumed 
+                                  L"Connect",      // Button text 
+                                  WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON,  // Styles 
+                                  Width - 150,         // x position
+                                  10,         // y position 
+                                  100,        // Button width
+                                  100,        // Button height
+                                  hWnd,     // Parent window
+                                  (HMENU)ConnectButton,       // No menu.
+                                  NULL, 
+                                  NULL);      // Pointer not needed.
+        } break;
         case WM_SIZE:
         {
             RECT ClientRect;
@@ -205,6 +227,7 @@ WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             int Width = ClientRect.right - ClientRect.left;
             int Height = ClientRect.bottom - ClientRect.top;
             Win32ResizeDIBSection(Width, Height);
+            SetWindowPos(Button, NULL, Width - 150, 10, 0, 0, SWP_NOSIZE | SWP_NOZORDER | SWP_SHOWWINDOW);
         } break;
         case WM_COMMAND:
         {
@@ -212,6 +235,10 @@ WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             
             switch (wmId)
             {
+                case ConnectButton:
+                {
+                    Speed++;
+                } break;
                 case IDM_ABOUT:
                 DialogBox(hInst, MAKEINTRESOURCE(IDD_ABOUTBOX), hWnd, About);
                 break;
