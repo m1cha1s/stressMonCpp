@@ -119,13 +119,30 @@ wWinMain(_In_ HINSTANCE hInstance,
     
     MSG msg;
     
-    Plot p;
+    Plot p[6];
     
-    p.StrokeColor = 0x00FFFFFF;
-    p.PlotRegion.top = 10;
-    p.PlotRegion.left = 10;
-    p.PlotRegion.bottom = 510;
-    p.PlotRegion.right = 510;
+    int pad = 10;
+    
+    int y = pad;
+    int x = pad;
+    int w = 400;
+    int h = 400;
+    
+    for (int i = 0; i < 6; i++)
+    {
+        p[i].StrokeColor = 0x00FF0000 + i*0x7F;
+        p[i].PlotRegion.top = y;
+        p[i].PlotRegion.left = x;
+        p[i].PlotRegion.bottom = h+y;
+        p[i].PlotRegion.right = w+x;
+        
+        x += w + pad;
+        if (i == 2)
+        {
+            y += h + pad;
+            x = pad;
+        }
+    }
     
     Running = true;
     while (Running)
@@ -145,8 +162,10 @@ wWinMain(_In_ HINSTANCE hInstance,
             }
         }
         
-        //RenderWeirdGradient(XOffset, YOffset);
-        p.Draw((u32*)BitmapMemory, BitmapWidth, BitmapHeight);
+        for (int i = 0; i < 6; i++)
+        {
+            p[i].Draw((u32*)BitmapMemory, BitmapWidth, BitmapHeight);
+        }
         
         HDC DeviceContext = GetDC(Window);
         RECT WindowRect;
@@ -156,7 +175,12 @@ wWinMain(_In_ HINSTANCE hInstance,
         Win32UpdateWindow(DeviceContext, &WindowRect, 0, 0, WindowWidth, WindowHeight);
         ReleaseDC(Window, DeviceContext);
         
-        p.PushHead(50-rand()%100);
+        for (int i = 0; i < 6; i++)
+        {
+            p[i].PushHead(50-rand()%100);
+        }
+        
+        
     }
     
     return (int) msg.wParam;
