@@ -45,7 +45,7 @@ void Plot::PushHead(double val)
     RingBuffer[RingBufferTail] = val;
 }
 
-void DrawLine(u32 *pixels, int width, double X0, double Y0, double X1, double Y1, u32 color)
+void DrawLine(u32 *pixels, int width, int height, double X0, double Y0, double X1, double Y1, u32 color)
 {
     double dx = X1-X0;
     double dy = Y1-Y0;
@@ -60,7 +60,10 @@ void DrawLine(u32 *pixels, int width, double X0, double Y0, double X1, double Y1
     
     for (int i = 0; i < steps; ++i)
     {
-        pixels[(int)round(X)+width*(int)round(Y)] = color;
+        if ((int)round(X)+width*(int)round(Y) < width*height)
+        {
+            pixels[(int)round(X)+width*(int)round(Y)] = color;
+        }
         X += Xinc;
         Y += Yinc;
     }
@@ -73,33 +76,36 @@ void Plot::Draw(u32 *bitmap, int Width, int Height)
     {
         for (int Y = PlotRegion.top; Y < PlotRegion.bottom; Y++)
         {
-            bitmap[X+Width*Y] = 0;
+            if (X+Width*Y < Width*Height)
+            {
+                bitmap[X+Width*Y] = 0;
+            }
         }
     }
     
     // Draw bounding box
-    DrawLine(bitmap, Width,
+    DrawLine(bitmap, Width, Height,
              PlotRegion.left,
              PlotRegion.top,
              PlotRegion.left,
              PlotRegion.bottom,
              0x00FFFFFF);
     
-    DrawLine(bitmap, Width,
+    DrawLine(bitmap, Width, Height,
              PlotRegion.right,
              PlotRegion.top,
              PlotRegion.right,
              PlotRegion.bottom,
              0x00FFFFFF);
     
-    DrawLine(bitmap, Width,
+    DrawLine(bitmap, Width, Height,
              PlotRegion.left,
              PlotRegion.top,
              PlotRegion.right,
              PlotRegion.top,
              0x00FFFFFF);
     
-    DrawLine(bitmap, Width,
+    DrawLine(bitmap, Width, Height,
              PlotRegion.left,
              PlotRegion.bottom,
              PlotRegion.right,
@@ -143,7 +149,7 @@ void Plot::Draw(u32 *bitmap, int Width, int Height)
         }
         double Y0 = (.5-RingBuffer[idx]/Delta)*(PlotRegion.bottom-PlotRegion.top)+PlotRegion.top;
         double Y1 = (.5-RingBuffer[idx+1]/Delta)*(PlotRegion.bottom-PlotRegion.top)+PlotRegion.top;
-        DrawLine(bitmap, Width,
+        DrawLine(bitmap, Width, Height,
                  X,
                  Y0,
                  X+DX,
